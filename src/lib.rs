@@ -4,10 +4,10 @@
 
 use crate::config::Config;
 use anyhow::{anyhow, bail, Context as _, Result};
-use bindings::{BindingsGenerator, BINDINGS_VERSION};
+use bindings::BindingsEncoder;
 use bytes::Bytes;
 use cargo::{
-    core::{compiler::Compilation, SourceId, Summary, Workspace},
+    core::{compiler::Compilation, Workspace},
     ops::{
         self, CompileOptions, DocOptions, ExportInfo, OutputMetadataOptions, Packages,
         UpdateOptions,
@@ -22,7 +22,6 @@ use registry::{
 };
 use semver::Version;
 use std::{
-    collections::BTreeMap,
     fs::{self, File},
     io::Read,
     path::Path,
@@ -99,97 +98,96 @@ async fn resolve_dependencies(
     Ok(map)
 }
 
-async fn generate_workspace_bindings(
+async fn encode_workspace_bindings(
     config: &Config,
-    workspace: &mut Workspace<'_>,
+    workspace: &Workspace<'_>,
     force_generation: bool,
 ) -> Result<PackageResolutionMap> {
     let map = resolve_dependencies(config, workspace).await?;
     let bindings_dir = bindings_dir(workspace);
     let _lock = bindings_dir.open_rw(".lock", config.cargo(), "bindings cache")?;
-    let last_modified_exe = last_modified_time(std::env::current_exe()?)?;
 
-    for package in workspace.members_mut() {
+    for package in workspace.members() {
         let resolution = match map.get(&package.package_id()) {
             Some(resolution) => resolution,
             None => continue,
         };
 
-        let dependency = generate_package_bindings(
+        encode_package_bindings(
             config,
             resolution,
             bindings_dir.as_path_unlocked(),
-            last_modified_exe,
             force_generation,
         )
         .await?;
-
-        let manifest = package.manifest_mut();
-        let dependencies = manifest
-            .dependencies()
-            .iter()
-            .cloned()
-            .chain([dependency])
-            .collect();
-
-        *manifest.summary_mut() = Summary::new(
-            config.cargo(),
-            manifest.package_id(),
-            dependencies,
-            manifest.original().features().unwrap_or(&BTreeMap::new()),
-            manifest.links(),
-        )?;
     }
 
     Ok(map)
 }
 
-async fn generate_package_bindings(
+async fn encode_package_bindings(
     config: &Config,
     resolution: &PackageDependencyResolution,
     bindings_dir: &Path,
-    last_modified_exe: SystemTime,
     force: bool,
-) -> Result<cargo::core::Dependency> {
-    let generator = BindingsGenerator::new(bindings_dir, resolution)?;
+) -> Result<()> {
+    let output = bindings_dir
+        .join(&resolution.metadata.name)
+        .join("bindings.wasm");
 
-    match generator.reason(last_modified_exe, force)? {
+    let last_modified_output = output
+        .is_file()
+        .then(|| last_modified_time(&output))
+        .transpose()?
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+
+    let encoder = BindingsEncoder::new(resolution)?;
+
+    match encoder.reason(last_modified_output, force)? {
         Some(reason) => {
             ::log::debug!(
-                "generating bindings package `{name}` at `{path}` because {reason}",
-                name = generator.package_name(),
-                path = generator.package_dir().display(),
+                "encoding bindings for package `{name}` at `{path}` because {reason}",
+                name = resolution.metadata.name,
+                path = output.display(),
             );
 
             config.shell().status(
-                "Generating",
+                "Encoding",
                 format!(
                     "bindings for {name} ({path})",
                     name = resolution.metadata.name,
-                    path = generator.package_dir().display()
+                    path = output.display()
                 ),
             )?;
 
-            generator.generate()?;
+            let encoded = encoder.encode(None)?;
+
+            if let Some(parent) = output.parent() {
+                fs::create_dir_all(parent).with_context(|| {
+                    format!(
+                        "failed to create output directory `{path}`",
+                        path = parent.display()
+                    )
+                })?;
+            }
+
+            fs::write(&output, encoded).with_context(|| {
+                format!(
+                    "failed to write bindings information to `{path}`",
+                    path = output.display()
+                )
+            })?;
         }
         None => {
             ::log::debug!(
-                "bindings package `{name}` at `{path}` is up-to-date",
-                name = generator.package_name(),
-                path = generator.package_dir().display()
+                "encoded bindings for package `{name}` at `{path}` is up-to-date",
+                name = resolution.metadata.name,
+                path = output.display(),
             );
         }
     }
 
-    let mut dep = cargo::core::Dependency::parse(
-        generator.package_name(),
-        Some(BINDINGS_VERSION),
-        SourceId::for_path(generator.package_dir())?,
-    )?;
-
-    // Set the explicit name in toml to the crate name expected in user source
-    dep.set_explicit_name_in_toml("bindings");
-    Ok(dep)
+    Ok(())
 }
 
 fn is_wasm_module(path: impl AsRef<Path>) -> Result<bool> {
@@ -298,11 +296,11 @@ fn create_component(config: &Config, path: &Path, binary: bool) -> Result<()> {
 /// It is expected that the current package contains a `package.metadata.component` section.
 pub async fn compile<'a>(
     config: &Config,
-    mut workspace: Workspace<'a>,
+    workspace: Workspace<'a>,
     options: &CompileOptions,
     force_generation: bool,
 ) -> Result<Compilation<'a>> {
-    let map = generate_workspace_bindings(config, &mut workspace, force_generation).await?;
+    let map = encode_workspace_bindings(config, &workspace, force_generation).await?;
     let compilation = ops::compile(&workspace, options)?;
 
     for (binary, output) in compilation
@@ -362,17 +360,13 @@ pub async fn publish_wit(
 
     let bytes = match &resolution.metadata.section.target {
         Some(Target::Local { .. }) => {
-            // NOTE: we don't need to lock the bindings directory as we're not actually going to read or write any files.
-            let bindings_dir = bindings_dir(&workspace);
-            let generator = BindingsGenerator::new(bindings_dir.as_path_unlocked(), resolution)?;
-            generator
-                .encode_target_world(options.version)
-                .with_context(|| {
-                    anyhow!(
-                        "failed to encode target WIT for package `{package}`",
-                        package = package.name()
-                    )
-                })?
+            let encoder = BindingsEncoder::new(resolution)?;
+            encoder.encode(Some(options.version)).with_context(|| {
+                anyhow!(
+                    "failed to encode target WIT for package `{package}`",
+                    package = package.name()
+                )
+            })?
         }
         _ => {
             bail!("a WIT package may only be published from a project using a local target");
@@ -573,11 +567,11 @@ pub async fn publish(
 /// It is expected that the current package contains a `package.metadata.component` section.
 pub async fn doc(
     config: &Config,
-    mut workspace: Workspace<'_>,
+    workspace: Workspace<'_>,
     options: &DocOptions,
     force_generation: bool,
 ) -> Result<()> {
-    generate_workspace_bindings(config, &mut workspace, force_generation).await?;
+    encode_workspace_bindings(config, &workspace, force_generation).await?;
     ops::doc(&workspace, options)?;
     Ok(())
 }
@@ -587,21 +581,21 @@ pub async fn doc(
 /// The returned metadata contains information about generated dependencies.
 pub async fn metadata(
     config: &Config,
-    mut workspace: Workspace<'_>,
+    workspace: Workspace<'_>,
     options: &OutputMetadataOptions,
 ) -> Result<ExportInfo> {
-    generate_workspace_bindings(config, &mut workspace, false).await?;
+    encode_workspace_bindings(config, &workspace, false).await?;
     ops::output_metadata(&workspace, options)
 }
 
 /// Check a component for errors with the given workspace and compile options.
 pub async fn check(
     config: &Config,
-    mut workspace: Workspace<'_>,
+    workspace: Workspace<'_>,
     options: &CompileOptions,
     force_generation: bool,
 ) -> Result<()> {
-    generate_workspace_bindings(config, &mut workspace, force_generation).await?;
+    encode_workspace_bindings(config, &workspace, force_generation).await?;
     ops::compile(&workspace, options)?;
     Ok(())
 }

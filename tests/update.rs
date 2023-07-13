@@ -159,14 +159,14 @@ world foo {
         .success()
         .stderr(contains("`foo:bar` v1.0.0 -> v1.1.0"));
 
-    let source = r#"use bindings::{baz, Foo};
+    let source = r#"cargo_component::generate!();
+use bindings::{baz, Foo};
 struct Component;
 impl Foo for Component {
     fn bar() -> String {
         baz()
     }
 }
-bindings::export!(Component);
 "#;
 
     fs::write(project.root().join("src/lib.rs"), source)?;

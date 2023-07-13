@@ -50,6 +50,10 @@ async fn main() -> Result<()> {
     #[cfg(feature = "pretty_env_logger")]
     pretty_env_logger::init_custom_env("CARGO_COMPONENT_LOG");
 
+    for (k, v) in std::env::vars() {
+        println!("{}={}", k, v);
+    }
+
     let mut config = Config::default()?;
 
     if let Err(e) = match CargoComponent::parse() {

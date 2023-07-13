@@ -121,14 +121,14 @@ world foo {
         .stderr(contains("Added dependency `test:foo` with version `0.1.0`"))
         .success();
 
-    let source = r#"use bindings::Foo;
+    let source = r#"cargo_component_bindings::generate!();
+use bindings::Foo;
 struct Component;
 impl Foo for Component {
     fn bar() -> String {
         bindings::foo::bar()
     }
 }
-bindings::export!(Component);
 "#;
 
     fs::write(project.root().join("src/lib.rs"), source)?;

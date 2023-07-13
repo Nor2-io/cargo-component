@@ -2,6 +2,13 @@
 name = "cargo-component"
 version = "0.1.0"
 edition = "2021"
+authors = ["Peter Huene <peter@huene.dev>"]
+description = "A cargo extension for authoring WebAssembly components"
+license = "Apache-2.0 WITH LLVM-exception"
+documentation = "https://docs.rs/cargo-component"
+categories = ["wasm"]
+keywords = ["webassembly", "wasm", "components", "component model"]
+repository = "https://github.com/bytecodealliance/cargo-component"
 
 [dependencies]
 anyhow = "1.0.71"
@@ -12,8 +19,6 @@ toml_edit = { version = "0.19.13", features = ["serde"] }
 warg-protocol = { git = "https://github.com/bytecodealliance/registry" }
 warg-crypto = { git = "https://github.com/bytecodealliance/registry" }
 warg-client = { git = "https://github.com/bytecodealliance/registry" }
-wit-bindgen-core = { git = "https://github.com/bytecodealliance/wit-bindgen" }
-wit-bindgen-rust = { git = "https://github.com/bytecodealliance/wit-bindgen" }
 wit-bindgen-rust-lib = { git = "https://github.com/bytecodealliance/wit-bindgen" }
 wit-parser = "0.9.0"
 wit-component = "0.12.0"
@@ -48,3 +53,9 @@ assert_cmd = "2.0.11"
 predicates = "3.0.3"
 wasmparser = "0.108.0"
 warg-server = { git = "https://github.com/bytecodealliance/registry" }
+
+[workspace]
+members = [
+    "crates/bindings",
+    "crates/macro",
+]

@@ -265,7 +265,9 @@ world example {
 
     fs::write(
         project.root().join("src/lib.rs"),
-        "use bindings::exports::{foo::bar::baz::{Baz, Ty}, bar::baz::qux::Qux};
+        "cargo_component_bindings::generate!();
+use bindings::exports::{foo::bar::baz::{Baz, Ty}, bar::baz::qux::Qux};
+
 struct Component;
 
 impl Baz for Component {
@@ -279,8 +281,7 @@ impl Qux for Component {
         todo!()
     }
 }
-
-bindings::export!(Component);",
+",
     )?;
 
     project
