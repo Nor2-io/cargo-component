@@ -63,7 +63,10 @@ clap = { version = "4.3.19", features = ["derive"] }
 toml_edit = { version = "0.19.14", features = ["serde"] }
 pretty_env_logger = "0.5.0"
 log = "0.4.19"
-tokio = { version = "1.29.1", default-features = false, features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.29.1", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+] }
 tokio-util = "0.7.8"
 heck = "0.4.1"
 semver = "1.0.18"
@@ -80,7 +83,7 @@ keyring = "2.0.5"
 libc = "0.2.147"
 owo-colors = "3.5.0"
 unicode-width = "0.1.10"
-p256 = "0.13.2" 
+p256 = "0.13.2"
 rand_core = "0.6.4"
 rpassword = "7.2.0"
 futures = "0.3.28"
@@ -88,7 +91,7 @@ bytes = "1.4.0"
 proc-macro2 = "1.0.66"
 quote = "1.0.32"
 syn = "2.0.28"
-wit-bindgen-rust-lib = { git = "https://github.com/bytecodealliance/wit-bindgen" }
-wit-bindgen-core = { git = "https://github.com/bytecodealliance/wit-bindgen" }
-wit-bindgen-rust = { git = "https://github.com/bytecodealliance/wit-bindgen" }
-wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen" }
+wit-bindgen-rust-lib = { git = "https://github.com/Nor2-io/wit-bindgen", branch = "resource-drop" }
+wit-bindgen-core = { git = "https://github.com/Nor2-io/wit-bindgen", branch = "resource-drop" }
+wit-bindgen-rust = { git = "https://github.com/Nor2-io/wit-bindgen", branch = "resource-drop" }
+wit-bindgen = { git = "https://github.com/Nor2-io/wit-bindgen", branch = "resource-drop" }

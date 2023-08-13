@@ -3752,7 +3752,7 @@ dependencies = [
 [[package]]
 name = "wit-bindgen"
 version = "0.9.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen#bf318b8ae4703586ae236a232f62813efc946df3"
+source = "git+https://github.com/Nor2-io/wit-bindgen?branch=resource-drop#6ac43fa8325502c3f0d2ff484eb36f2acf6141bd"
 dependencies = [
  "bitflags 2.3.3",
  "wit-bindgen-rust-macro",
@@ -3761,7 +3761,7 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-core"
 version = "0.9.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen#bf318b8ae4703586ae236a232f62813efc946df3"
+source = "git+https://github.com/Nor2-io/wit-bindgen?branch=resource-drop#6ac43fa8325502c3f0d2ff484eb36f2acf6141bd"
 dependencies = [
  "anyhow",
  "wit-component",
@@ -3771,7 +3771,7 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-rust"
 version = "0.9.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen#bf318b8ae4703586ae236a232f62813efc946df3"
+source = "git+https://github.com/Nor2-io/wit-bindgen?branch=resource-drop#6ac43fa8325502c3f0d2ff484eb36f2acf6141bd"
 dependencies = [
  "anyhow",
  "heck",
@@ -3784,7 +3784,7 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-rust-lib"
 version = "0.9.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen#bf318b8ae4703586ae236a232f62813efc946df3"
+source = "git+https://github.com/Nor2-io/wit-bindgen?branch=resource-drop#6ac43fa8325502c3f0d2ff484eb36f2acf6141bd"
 dependencies = [
  "heck",
  "wit-bindgen-core",
@@ -3793,7 +3793,7 @@ dependencies = [
 [[package]]
 name = "wit-bindgen-rust-macro"
 version = "0.9.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen#bf318b8ae4703586ae236a232f62813efc946df3"
+source = "git+https://github.com/Nor2-io/wit-bindgen?branch=resource-drop#6ac43fa8325502c3f0d2ff484eb36f2acf6141bd"
 dependencies = [
  "anyhow",
  "proc-macro2",
